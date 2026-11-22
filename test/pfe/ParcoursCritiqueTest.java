@@ -22,8 +22,7 @@ public class ParcoursCritiqueTest {
 
         browser = playwright.chromium().launch(
             new BrowserType.LaunchOptions()
-                .setChannel("msedge")
-                .setHeadless(false)
+                .setHeadless(true)
         );
     }
 
