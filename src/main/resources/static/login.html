@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Connexion - Gestion PFE</title>
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, sans-serif; }
+        body {
+            background-color: #f4f7f6;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .login-card {
+            background: #ffffff;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+            width: 100%;
+            max-width: 400px;
+        }
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #eee;
+        }
+        .tab {
+            flex: 1;
+            text-align: center;
+            padding: 10px;
+            cursor: pointer;
+            font-weight: bold;
+            color: #7f8c8d;
+        }
+        .tab.active {
+            color: #3498db;
+            border-bottom: 2px solid #3498db;
+            margin-bottom: -2px;
+        }
+        h2 { color: #2c3e50; margin-bottom: 20px; font-size: 20px; text-align: center; }
+        input {
+            width: 100%;
+            padding: 12px 15px;
+            margin-bottom: 15px;
+            border: 1px solid #dcdcdc;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        input:focus { border-color: #3498db; outline: none; }
+        button {
+            width: 100%;
+            padding: 12px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        button:hover { background-color: #2980b9; }
+        .btn-success { background-color: #27ae60; }
+        .btn-success:hover { background-color: #219150; }
+        .msg { margin-top: 15px; font-weight: bold; text-align: center; height: 20px; font-size: 14px; }
+        .msg-error { color: #e74c3c; }
+        .msg-success { color: #27ae60; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+    <div class="login-card">
+        <!-- Onglets -->
+        <div class="tabs">
+            <div class="tab active" onclick="switchTab('login')" id="tab-login">Connexion</div>
+            <div class="tab" onclick="switchTab('register')" id="tab-register">S'inscrire</div>
+        </div>
+
+        <!-- Formulaire de Connexion -->
+        <div id="form-login">
+            <h2>Connexion</h2>
+            <input data-testid="login-username" id="login-user" placeholder="Identifiant">
+            <input data-testid="login-password" id="login-pass" type="password" placeholder="Mot de passe">
+            <button data-testid="login-button" onclick="connecter()">Se connecter</button>
+            <p class="msg msg-error" data-testid="login-error" id="login-error"></p>
+        </div>
+
+        <!-- Formulaire d'Inscription -->
+        <div id="form-register" class="hidden">
+            <h2>Créer un compte</h2>
+            <input data-testid="register-username" id="reg-user" placeholder="Nouvel identifiant">
+            <input data-testid="register-password" id="reg-pass" type="password" placeholder="Mot de passe (min. 4 car.)">
+            <button class="btn-success" data-testid="register-button" onclick="inscrire()">Créer mon compte</button>
+            <p class="msg" data-testid="register-message" id="register-msg"></p>
+        </div>
+    </div>
+
+    <script>
+        // --- GESTION DES ONGLETS ---
+        function switchTab(type) {
+            document.getElementById('form-login').classList.add('hidden');
+            document.getElementById('form-register').classList.add('hidden');
+            document.getElementById('tab-login').classList.remove('active');
+            document.getElementById('tab-register').classList.remove('active');
+
+            if (type === 'login') {
+                document.getElementById('form-login').classList.remove('hidden');
+                document.getElementById('tab-login').classList.add('active');
+            } else {
+                document.getElementById('form-register').classList.remove('hidden');
+                document.getElementById('tab-register').classList.add('active');
+            }
+        }
+
+        // --- LOGIQUE DE CONNEXION (vérifiée par le serveur) ---
+        function connecter() {
+            var u = document.getElementById('login-user').value;
+            var p = document.getElementById('login-pass').value;
+            var errorMsg = document.getElementById('login-error');
+
+            fetch('/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: u, password: p })
+            }).then(function (r) {
+                if (r.ok) {
+                    sessionStorage.setItem('connecte', 'oui');
+                    location.href = '/creer.html';
+                } else {
+                    errorMsg.textContent = 'Identifiant ou mot de passe incorrect';
+                }
+            });
+        }
+
+        // --- LOGIQUE D'INSCRIPTION (vérifiée par le serveur) ---
+        function inscrire() {
+            var u = document.getElementById('reg-user').value;
+            var p = document.getElementById('reg-pass').value;
+            var msg = document.getElementById('register-msg');
+
+            fetch('/api/auth/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: u, password: p })
+            }).then(function (r) {
+                return r.json().then(function (data) { return { ok: r.ok, data: data }; });
+            }).then(function (res) {
+                if (!res.ok) {
+                    msg.textContent = res.data.erreur;
+                    msg.className = 'msg msg-error';
+                    return;
+                }
+                msg.textContent = 'Compte créé avec succès ! Connectez-vous.';
+                msg.className = 'msg msg-success';
+                document.getElementById('reg-user').value = '';
+                document.getElementById('reg-pass').value = '';
+                setTimeout(function () { switchTab('login'); }, 2000);
+            });
+        }
+    </script>
+</body>
+</html>

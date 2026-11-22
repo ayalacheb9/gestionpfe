@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Créer un rapport</title>
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, sans-serif; }
+        body { background-color: #f4f7f6; margin: 0; padding: 0; }
+        .navbar {
+            background-color: #2c3e50;
+            padding: 15px 30px;
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .navbar span { font-weight: bold; font-size: 18px; }
+        .navbar a { color: white; text-decoration: none; font-size: 14px; }
+        .navbar a:hover { text-decoration: underline; }
+        
+        .container {
+            max-width: 500px;
+            margin: 50px auto;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }
+        h1 { color: #2c3e50; font-size: 22px; text-align: center; margin-bottom: 25px; }
+        input {
+            width: 100%;
+            padding: 12px 15px;
+            margin-bottom: 15px;
+            border: 1px solid #dcdcdc;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        input:focus { border-color: #27ae60; outline: none; }
+        button {
+            width: 100%;
+            padding: 12px;
+            background-color: #27ae60;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        button:hover { background-color: #219150; }
+        .msg { color: #27ae60; margin-top: 15px; font-weight: bold; text-align: center; }
+        .link-container { text-align: center; margin-top: 20px; }
+        .link-container a { color: #3498db; text-decoration: none; font-size: 14px; }
+        .link-container a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <span>Gestion des PFE</span>
+        <a href="/login.html">Déconnexion</a>
+    </div>
+
+    <div class="container">
+        <h1>Créer un rapport</h1>
+        <input data-testid="rapport-id" placeholder="Identifiant">
+        <input data-testid="rapport-titre" placeholder="Titre">
+        <button data-testid="rapport-creer" onclick="creer()">Créer</button>
+        <p class="msg" data-testid="rapport-message"></p>
+        <div class="link-container">
+            <a data-testid="lien-liste" href="/liste.html">Voir la liste des rapports</a>
+        </div>
+    </div>
+
+    <script>
+        if (sessionStorage.getItem('connecte') !== 'oui') { location.href = '/login.html'; }
+        function creer() {
+            var id = document.querySelector('[data-testid="rapport-id"]').value;
+            var titre = document.querySelector('[data-testid="rapport-titre"]').value;
+            var msg = document.querySelector('[data-testid="rapport-message"]');
+            fetch('/api/rapports', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ identifiant: id, titre: titre })
+            }).then(function (r) {
+                return r.json().then(function (d) {
+                    msg.textContent = r.ok ? 'Rapport créé : ' + d.identifiant : 'Erreur : ' + d.erreur;
+                });
+            });
+        }
+    </script>
+</body>
+</html>
