@@ -17,6 +17,7 @@ import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 
 /** Tests d'intégration de l'API (contrôleurs + authentification, contexte Spring réel). */
 @SpringBootTest
@@ -171,5 +172,48 @@ class RapportApiIntegrationTest {
         mvc.perform(post("/api/auth/register").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"username\":\"etudiant\",\"password\":\"abcd\"}"))
                 .andExpect(status().isConflict());
+    }
+        @Test // IT-08 : changement de statut conservé
+    void it08_changement_de_statut_conserve() throws Exception {
+        String id = nouvelId();
+        creer(id, "Rapport a modifier");
+        mvc.perform(patch("/api/rapports/" + id + "/statut").with(connecte())
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"statut\":\"En cours\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.statut").value("En cours"));
+        mvc.perform(get("/api/rapports/" + id).with(connecte()))
+                .andExpect(jsonPath("$.statut").value("En cours"));
+    }
+
+    @Test // IT-09 : statut invalide refusé
+    void it09_statut_invalide_400() throws Exception {
+        String id = nouvelId();
+        creer(id, "Rapport statut invalide");
+        mvc.perform(patch("/api/rapports/" + id + "/statut").with(connecte())
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"statut\":\"Inconnu\"}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test // IT-10 : suppression conservée
+    void it10_suppression_conservee() throws Exception {
+        String id = nouvelId();
+        creer(id, "Rapport a supprimer");
+        mvc.perform(delete("/api/rapports/" + id).with(connecte())).andExpect(status().isNoContent());
+        mvc.perform(get("/api/rapports/" + id).with(connecte())).andExpect(status().isNotFound());
+    }
+
+    @Test // IT-11 : suppression d'un rapport inexistant
+    void it11_suppression_inexistant_404() throws Exception {
+        mvc.perform(delete("/api/rapports/INEXISTANT").with(connecte())).andExpect(status().isNotFound());
+    }
+
+    @Test // REG-BUG-05 : titre contenant du HTML refusé
+    void regBug05_titre_avec_html_refuse() throws Exception {
+        assertEquals(400, creer(nouvelId(), "<b>test</b>"));
+    }
+
+    @Test // REG-BUG-05b : identifiant contenant du HTML refusé
+    void regBug05b_identifiant_avec_html_refuse() throws Exception {
+        assertEquals(400, creer("a<b>", "Titre valide"));
     }
 }

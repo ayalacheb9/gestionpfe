@@ -77,4 +77,15 @@ class RapportValidatorTest {
         assertNotNull(RapportValidator.verifierTitre("   "));
         assertNotNull(RapportValidator.verifierTitre(""));
     }
+        @Test // UT-13 : balises HTML refusées (BUG-05)
+    void titre_avec_balises_html_est_refuse() {
+        assertFalse(RapportValidator.titreValide("<b>test</b>"));
+        assertFalse(RapportValidator.titreValide("<i>italique</i>"));
+        assertNotNull(RapportValidator.verifierTitre("<b>test</b>"));
+    }
+
+    @Test // UT-14 : un titre ordinaire reste valide
+    void titre_ordinaire_avec_apostrophe_et_chiffres_reste_valide() {
+        assertTrue(RapportValidator.titreValide("Rapport de stage 2026 - l'application"));
+    }
 }

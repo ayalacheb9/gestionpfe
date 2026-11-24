@@ -1,6 +1,6 @@
-package pfe;// ADAPTER au package réel du projet
+package pfe;
 
-/** Règle métier : titre obligatoire, 5 à 100 caractères (hors espaces de bord). */
+/** Règles métier : titre obligatoire, 5 à 100 caractères, sans balises HTML. */
 public final class RapportValidator {
     public static final int TITRE_MIN = 5;
     public static final int TITRE_MAX = 100;
@@ -8,9 +8,7 @@ public final class RapportValidator {
     private RapportValidator() {}
 
     public static boolean titreValide(String titre) {
-        if (titre == null) return false;
-        int n = titre.trim().length();
-        return n >= TITRE_MIN && n <= TITRE_MAX;
+        return verifierTitre(titre) == null;
     }
 
     /** Retourne un message d'erreur, ou null si le titre est valide. */
@@ -19,6 +17,9 @@ public final class RapportValidator {
         int n = titre.trim().length();
         if (n < TITRE_MIN) return "Le titre doit contenir au moins " + TITRE_MIN + " caractères.";
         if (n > TITRE_MAX) return "Le titre ne doit pas dépasser " + TITRE_MAX + " caractères.";
+        if (titre.contains("<") || titre.contains(">")) {
+            return "Le titre ne doit pas contenir les caractères < ou >.";
+        }
         return null;
     }
 }

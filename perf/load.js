@@ -1,3 +1,4 @@
+
 import http from 'k6/http';
 import { check, sleep } from 'k6';
 
@@ -15,12 +16,29 @@ export const options = {
 
 export default function () {
   const base = __ENV.BASE_URL || 'http://localhost:8080';
-  if (__ITER === 0) {
-    http.post(`${base}/api/auth/login`,
-      JSON.stringify({ username: 'etudiant', password: 'test123' }),
-      { headers: { 'Content-Type': 'application/json' } });
-  }
+
+  // Connexion pour obtenir une session authentifiée
+  const login = http.post(
+    `${base}/api/auth/login`,
+    JSON.stringify({
+      username: 'etudiant',
+      password: 'test123'
+    }),
+    {
+      headers: { 'Content-Type': 'application/json' }
+    }
+  );
+
+  check(login, {
+    'connexion réussie': (r) => r.status === 200,
+  });
+
+  // Accès à l'API des rapports avec la session
   const res = http.get(`${base}/api/rapports`);
-  check(res, { 'statut 200': (r) => r.status === 200 });
+
+  check(res, {
+    'statut 200': (r) => r.status === 200,
+  });
+
   sleep(1);
 }

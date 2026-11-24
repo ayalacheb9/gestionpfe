@@ -9,6 +9,8 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/rapports")
 public class RapportController {
 
+    private static final List<String> STATUTS = List.of("Soumis", "En cours", "Validé");
+
     private final Map<String, Rapport> rapports = new LinkedHashMap<>();
 
     public RapportController() {
@@ -45,7 +47,12 @@ public class RapportController {
         if (dto.getIdentifiant() == null || dto.getIdentifiant().isBlank()
                 || dto.getTitre() == null || dto.getTitre().isBlank()) {
             return erreur(HttpStatus.BAD_REQUEST, "L'identifiant et le titre sont obligatoires.");
-        }        String erreurTitre = RapportValidator.verifierTitre(dto.getTitre());
+        }
+        if (!dto.getIdentifiant().matches("[A-Za-z0-9_-]{1,30}")) {
+            return erreur(HttpStatus.BAD_REQUEST,
+                    "L'identifiant ne doit contenir que des lettres, chiffres, tirets et underscores (30 maximum).");
+        }
+        String erreurTitre = RapportValidator.verifierTitre(dto.getTitre());
         if (erreurTitre != null) {
             return erreur(HttpStatus.BAD_REQUEST, erreurTitre);
         }
@@ -74,5 +81,29 @@ public class RapportController {
             return erreur(HttpStatus.BAD_REQUEST, e.getMessage());
         }
         return ResponseEntity.ok(new RapportDTO(r));
+    }
+
+    // PATCH /api/rapports/{id}/statut -> 200, 400 ou 404
+    @PatchMapping("/{id}/statut")
+    public ResponseEntity<?> changerStatut(@PathVariable String id, @RequestBody Map<String, String> corps) {
+        Rapport r = rapports.get(id);
+        if (r == null) {
+            return erreur(HttpStatus.NOT_FOUND, "Rapport introuvable : " + id);
+        }
+        String statut = corps.get("statut");
+        if (statut == null || !STATUTS.contains(statut)) {
+            return erreur(HttpStatus.BAD_REQUEST, "Statut invalide.");
+        }
+        r.setStatut(statut);
+        return ResponseEntity.ok(new RapportDTO(r));
+    }
+
+    // DELETE /api/rapports/{id} -> 204 ou 404
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> supprimer(@PathVariable String id) {
+        if (rapports.remove(id) == null) {
+            return erreur(HttpStatus.NOT_FOUND, "Rapport introuvable : " + id);
+        }
+        return ResponseEntity.noContent().build();
     }
 }

@@ -79,7 +79,6 @@
             font-weight: bold;
         }
 
-        /* Boutons d'action dans le tableau */
         .action-btn {
             border: none;
             padding: 6px 12px;
@@ -126,64 +125,120 @@
     <script>
         if (sessionStorage.getItem('connecte') !== 'oui') { location.href = '/login.html'; }
 
-        fetch('/api/rapports').then(function (r) {
-            // Session expirée ou absente : retour à la connexion
-            if (r.status === 401) {
+        var STYLES = {
+            'Soumis':   { fond: '#e8f4fd', texte: '#3498db' },
+            'En cours': { fond: '#fef9e7', texte: '#f39c12' },
+            'Validé':   { fond: '#eafaf1', texte: '#27ae60' }
+        };
+        var SUIVANT = { 'Soumis': 'En cours', 'En cours': 'Validé', 'Validé': 'Soumis' };
+
+        function appliquerStyle(badge) {
+            var s = STYLES[badge.textContent] || STYLES['Soumis'];
+            badge.style.backgroundColor = s.fond;
+            badge.style.color = s.texte;
+        }
+
+        // Session expirée ou absente : retour à la connexion
+        function sessionValide(reponse) {
+            if (reponse.status === 401) {
                 sessionStorage.removeItem('connecte');
                 location.href = '/login.html';
-                return null;
+                return false;
             }
+            return true;
+        }
+
+        function cellule(texte) {
+            var td = document.createElement('td');
+            td.textContent = texte;   // textContent : aucun code HTML n'est interprété
+            return td;
+        }
+
+        function creerLigne(r) {
+            var tr = document.createElement('tr');
+            tr.setAttribute('data-testid', 'ligne-' + r.identifiant);
+            tr.setAttribute('id', 'row-' + r.identifiant);
+
+            var tdStatut = document.createElement('td');
+            var badge = document.createElement('span');
+            badge.className = 'badge';
+            badge.setAttribute('id', 'badge-' + r.identifiant);
+            badge.textContent = r.statut;
+            appliquerStyle(badge);
+            tdStatut.appendChild(badge);
+
+            var tdActions = document.createElement('td');
+            var btnEdit = document.createElement('button');
+            btnEdit.className = 'action-btn btn-edit';
+            btnEdit.setAttribute('data-testid', 'btn-edit-' + r.identifiant);
+            btnEdit.textContent = 'Modifier';
+            btnEdit.addEventListener('click', function () { modifier(r.identifiant); });
+
+            var btnDelete = document.createElement('button');
+            btnDelete.className = 'action-btn btn-delete';
+            btnDelete.setAttribute('data-testid', 'btn-delete-' + r.identifiant);
+            btnDelete.textContent = 'Supprimer';
+            btnDelete.addEventListener('click', function () { supprimer(r.identifiant); });
+
+            tdActions.appendChild(btnEdit);
+            tdActions.appendChild(btnDelete);
+
+            tr.appendChild(cellule(r.identifiant));
+            tr.appendChild(cellule(r.titre));
+            tr.appendChild(tdStatut);
+            tr.appendChild(tdActions);
+            return tr;
+        }
+
+        fetch('/api/rapports').then(function (r) {
+            if (!sessionValide(r)) { return null; }
             return r.json();
         }).then(function (liste) {
             if (!liste) { return; }
             var corps = document.getElementById('corps');
 
             if (liste.length === 0) {
-                corps.innerHTML = '<tr><td colspan="4" class="empty-message">Aucun rapport pour le moment.</td></tr>';
+                var vide = document.createElement('tr');
+                var td = document.createElement('td');
+                td.setAttribute('colspan', '4');
+                td.className = 'empty-message';
+                td.textContent = 'Aucun rapport pour le moment.';
+                vide.appendChild(td);
+                corps.appendChild(vide);
                 return;
             }
-
-            liste.forEach(function (r) {
-                var tr = document.createElement('tr');
-                tr.setAttribute('data-testid', 'ligne-' + r.identifiant);
-                tr.setAttribute('id', 'row-' + r.identifiant);
-
-                tr.innerHTML =
-                    '<td>' + r.identifiant + '</td>' +
-                    '<td>' + r.titre + '</td>' +
-                    '<td><span class="badge" id="badge-' + r.identifiant + '">' + r.statut + '</span></td>' +
-                    '<td>' +
-                        '<button class="action-btn btn-edit" onclick="modifier(\'' + r.identifiant + '\')" data-testid="btn-edit-' + r.identifiant + '">Modifier</button>' +
-                        '<button class="action-btn btn-delete" onclick="supprimer(\'' + r.identifiant + '\')" data-testid="btn-delete-' + r.identifiant + '">Supprimer</button>' +
-                    '</td>';
-
-                corps.appendChild(tr);
-            });
+            liste.forEach(function (r) { corps.appendChild(creerLigne(r)); });
         });
 
-        // Modifier le statut (affichage uniquement)
+        // Modifier le statut : enregistré par le serveur
         function modifier(id) {
             var badge = document.getElementById('badge-' + id);
-            if (badge.textContent === 'Soumis') {
-                badge.textContent = 'En cours';
-                badge.style.backgroundColor = '#fef9e7';
-                badge.style.color = '#f39c12';
-            } else if (badge.textContent === 'En cours') {
-                badge.textContent = 'Validé';
-                badge.style.backgroundColor = '#eafaf1';
-                badge.style.color = '#27ae60';
-            } else {
-                badge.textContent = 'Soumis';
-                badge.style.backgroundColor = '#e8f4fd';
-                badge.style.color = '#3498db';
-            }
+            var suivant = SUIVANT[badge.textContent] || 'Soumis';
+            fetch('/api/rapports/' + encodeURIComponent(id) + '/statut', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ statut: suivant })
+            }).then(function (r) {
+                if (!sessionValide(r)) { return null; }
+                return r.ok ? r.json() : null;
+            }).then(function (dto) {
+                if (dto) {
+                    badge.textContent = dto.statut;
+                    appliquerStyle(badge);
+                }
+            });
         }
 
-        // Supprimer une ligne (affichage uniquement)
+        // Supprimer un rapport : enregistré par le serveur
         function supprimer(id) {
             if (confirm("Voulez-vous vraiment supprimer le rapport " + id + " ?")) {
-                var row = document.getElementById('row-' + id);
-                row.remove();
+                fetch('/api/rapports/' + encodeURIComponent(id), { method: 'DELETE' }).then(function (r) {
+                    if (!sessionValide(r)) { return; }
+                    if (r.ok) {
+                        var row = document.getElementById('row-' + id);
+                        if (row) { row.remove(); }
+                    }
+                });
             }
         }
 
