@@ -3,37 +3,52 @@ package pfe;
 
 import com.microsoft.playwright.*;
 import org.junit.jupiter.api.*;
+import org.springframework.boot.SpringApplication;
+import org.springframework.context.ConfigurableApplicationContext;
 import pfe.pages.CreationPage;
 import pfe.pages.ListePage;
 import pfe.pages.LoginPage;
 
 public class ParcoursCritiqueTest {
 
-    static final String URL_BASE = "http://localhost:8080";
+    static String URL_BASE;
     static Playwright playwright;
     static Browser browser;
+    static ConfigurableApplicationContext application;
 
     BrowserContext context;
     Page page;
 
     @BeforeAll
-    static void lancerNavigateur() {
+    static void demarrerApplicationEtNavigateur() {
+        application = new SpringApplication(GestionPfeApplication.class)
+                .run("--server.port=0");
+
+        String port = application.getEnvironment()
+                .getProperty("local.server.port");
+
+        URL_BASE = "http://localhost:" + port;
+
         playwright = Playwright.create();
 
         browser = playwright.chromium().launch(
-            new BrowserType.LaunchOptions()
-                .setHeadless(true)
+                new BrowserType.LaunchOptions()
+                        .setHeadless(true)
         );
     }
 
     @AfterAll
-    static void fermerNavigateur() {
+    static void fermerApplicationEtNavigateur() {
         if (browser != null) {
             browser.close();
         }
 
         if (playwright != null) {
             playwright.close();
+        }
+
+        if (application != null) {
+            application.close();
         }
     }
 
