@@ -1,0 +1,8 @@
+services:
+  gestionpfe:
+    build: .
+    image: ghcr.io/ayalacheb9/gestionpfe:${IMAGE_TAG:-latest}
+    container_name: gestionpfe
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
