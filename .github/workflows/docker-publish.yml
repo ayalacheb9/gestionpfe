@@ -35,7 +35,7 @@ jobs:
         run: |
           docker run -d --name app -p 8080:8080 ghcr.io/ayalacheb9/gestionpfe:${{ github.sha }}
           for i in $(seq 1 30); do
-            curl -sf http://localhost:8080/login.html && echo "OK" && exit 0
+            curl -sf http://localhost:8080/actuator/health && echo " OK" && exit 0
             sleep 3
           done
           docker logs app
